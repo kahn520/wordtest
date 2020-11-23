@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Office.Core;
 using Microsoft.Office.Interop.Word;
@@ -27,7 +28,8 @@ namespace WordAddIn2
         private void button1_Click(object sender, RibbonControlEventArgs e)
         {
             _application.ScreenUpdating = false;
-            Document doc = _application.ActiveDocument;
+            Document doc = _application.Documents.OpenNoRepairDialog("D:/yoo/简历/吴雨希简历.docx");
+            _application.Selection.EndKey(WdUnits.wdStory, WdMovementType.wdMove);
 
             DocumentInfo docInfo = new DocumentInfo();
             docInfo.Size.Width = doc.PageSetup.PageWidth;
@@ -36,7 +38,7 @@ namespace WordAddIn2
             {
                 var obj = doc.Paragraphs[i].Range;
                 TextRange textRange = GetTextRangInfo(obj);
-                if (textRange != null)
+                if (textRange != null && !string.IsNullOrEmpty(textRange.Text))
                     docInfo.TextRanges.Add(textRange);
             }
 
@@ -47,9 +49,9 @@ namespace WordAddIn2
                 if(list.Any())
                     docInfo.TextRanges.AddRange(list);
             }
-
+            doc.Close(WdSaveOptions.wdDoNotSaveChanges);
             _application.ScreenUpdating = true;
-            File.WriteAllText(@"I:\yoo\out.json", JsonConvert.SerializeObject(docInfo), Encoding.UTF8);
+            File.WriteAllText(@"D:\yoo\out.json", JsonConvert.SerializeObject(docInfo), Encoding.UTF8);
         }
 
         private List<TextRange> GetShapeTextRange(Shape s)
@@ -70,7 +72,7 @@ namespace WordAddIn2
                     {
                         var obj = s.TextFrame.TextRange.Paragraphs[i].Range;
                         TextRange textRange = GetTextRangInfo(obj);
-                        if (textRange != null)
+                        if (textRange != null && !string.IsNullOrEmpty(textRange.Text))
                             list.Add(textRange);
                     }
                 }

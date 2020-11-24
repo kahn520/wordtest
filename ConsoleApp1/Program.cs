@@ -9,6 +9,8 @@ using Newtonsoft.Json;
 using Path = System.IO.Path;
 using System.Drawing;
 using DocumentFormat.OpenXml.Drawing;
+using iTextSharp.text.pdf;
+using iTextSharp.text.pdf.parser;
 using Rectangle = DocumentFormat.OpenXml.Vml.Rectangle;
 using Shape = DocumentFormat.OpenXml.Vml.Shape;
 
@@ -18,36 +20,87 @@ namespace ConsoleApp1
     {
         static void Main(string[] args)
         {
-            string strFile = @"I:\yoo\Doc1.docx";
-            using (WordprocessingDocument doc = WordprocessingDocument.Open(strFile, true))
+            //string strFile = @"D:\yoo\【着色算法】可根据不同着色技巧对图示进行重新染色.pdf";
+            string strFile = @"D:\yoo\张甜甜-Java开发.pdf";
+
+            PdfDocument doc = new PdfDocument();
+            PdfReader reader = new PdfReader(strFile);
+            for (int i = 1; i <= reader.NumberOfPages; i++)
             {
-                DocumentInfo docInfo = new DocumentInfo();
-                var body = doc.MainDocumentPart.Document.Body;
-                var shapes = body.Descendants<Shape>();
-                foreach (Shape shape in shapes)
-                {
-                    ShapeInfo shapeInfo = new ShapeInfo(shape);
-                    if (shapeInfo.Text == "")
-                        continue;
-
-                    docInfo.Shapes.Add(shapeInfo);
-                }
-
-
-                var rectangles = body.Descendants<Rectangle>();
-                foreach (Rectangle rect in rectangles)
-                {
-                    ShapeInfo shapeInfo = new ShapeInfo(rect);
-                    if (shapeInfo.Text == "")
-                        continue;
-
-                    docInfo.Shapes.Add(shapeInfo);
-                }
-
-                string strJsonFile = Path.ChangeExtension(strFile, ".json");
-                string strJson = JsonConvert.SerializeObject(docInfo);
-                File.WriteAllText(strJsonFile, strJson, Encoding.GetEncoding("GB2312"));
+                RenderFilter fontFilter = new RegionTextRenderFilter(reader.GetPageSize(i));
+                ITextExtractionStrategy strategy = new TextWithFontExtractionStategy();
+                string s = PdfTextExtractor.GetTextFromPage(reader, i, strategy);
             }
+        }
+    }
+
+    public class TextWithFontExtractionStategy : iTextSharp.text.pdf.parser.ITextExtractionStrategy
+    {
+        StringBuilder result = new StringBuilder();
+        private Vector lastStart;
+        private Vector lastEnd;
+
+        public void BeginTextBlock()
+        {
+            
+        }
+
+        public void RenderText(TextRenderInfo renderInfo)
+        {
+            var a = renderInfo.GetBaseline();
+            var a1 = renderInfo.GetAscentLine();
+            var a2 = renderInfo.GetSingleSpaceWidth();
+            var a3 = renderInfo.GetDescentLine();
+            var a4 = renderInfo.GetUnscaledBaseline();
+            var a5 = renderInfo.GetFont();
+            var a6 = renderInfo.GetRise();
+            var a7 = renderInfo.GetText();
+
+            bool flag1 = this.result.Length == 0;
+            bool flag2 = false;
+            LineSegment baseline = renderInfo.GetBaseline();
+            Vector startPoint = baseline.GetStartPoint();
+            Vector endPoint = baseline.GetEndPoint();
+            if (!flag1)
+            {
+                Vector v = startPoint;
+                Vector lastStart = this.lastStart;
+                Vector lastEnd = this.lastEnd;
+                if ((double)(lastEnd.Subtract(lastStart).Cross(lastStart.Subtract(v)).LengthSquared / lastEnd.Subtract(lastStart).LengthSquared) > 1.0)
+                    flag2 = true;
+            }
+            if (flag2)
+                this.AppendTextChunk('\n');
+            else if (!flag1 && this.result[this.result.Length - 1] != ' ' && (renderInfo.GetText().Length > 0 && renderInfo.GetText()[0] != ' ') && (double)this.lastEnd.Subtract(startPoint).Length > (double)renderInfo.GetSingleSpaceWidth() / 2.0)
+                this.AppendTextChunk(' ');
+            this.AppendTextChunk(renderInfo.GetText());
+            this.lastStart = startPoint;
+            this.lastEnd = endPoint;
+        }
+
+        protected void AppendTextChunk(string text)
+        {
+            this.result.Append(text);
+        }
+
+        protected void AppendTextChunk(char text)
+        {
+            this.result.Append(text);
+        }
+
+        public void EndTextBlock()
+        {
+            
+        }
+
+        public void RenderImage(ImageRenderInfo renderInfo)
+        {
+            
+        }
+
+        public string GetResultantText()
+        {
+            return this.result.ToString();
         }
     }
 

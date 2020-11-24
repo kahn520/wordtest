@@ -40,6 +40,9 @@ namespace ConsoleApp1
         private Vector lastStart;
         private Vector lastEnd;
 
+        public Dictionary<string,RectangleF> dicStrRectangleF = new Dictionary<string, RectangleF>();
+        private RectangleF lastRectangleF = RectangleF.Empty;
+
         public void BeginTextBlock()
         {
             
@@ -48,9 +51,9 @@ namespace ConsoleApp1
         public void RenderText(TextRenderInfo renderInfo)
         {
             var a = renderInfo.GetBaseline();
-            var a1 = renderInfo.GetAscentLine();
+            var ascentLine = renderInfo.GetAscentLine();
             var a2 = renderInfo.GetSingleSpaceWidth();
-            var a3 = renderInfo.GetDescentLine();
+            var descentLine = renderInfo.GetDescentLine();
             var a4 = renderInfo.GetUnscaledBaseline();
             var a5 = renderInfo.GetFont();
             var a6 = renderInfo.GetRise();
@@ -69,13 +72,29 @@ namespace ConsoleApp1
                 if ((double)(lastEnd.Subtract(lastStart).Cross(lastStart.Subtract(v)).LengthSquared / lastEnd.Subtract(lastStart).LengthSquared) > 1.0)
                     flag2 = true;
             }
+
+            RectangleF rectCurrent = getRenderRectangleF(renderInfo);
+
+
             if (flag2)
+            {
                 this.AppendTextChunk('\n');
-            else if (!flag1 && this.result[this.result.Length - 1] != ' ' && (renderInfo.GetText().Length > 0 && renderInfo.GetText()[0] != ' ') && (double)this.lastEnd.Subtract(startPoint).Length > (double)renderInfo.GetSingleSpaceWidth() / 2.0)
-                this.AppendTextChunk(' ');
+            }
+            //else if (!flag1 && this.result[this.result.Length - 1] != ' ' && (renderInfo.GetText().Length > 0 && renderInfo.GetText()[0] != ' ') && (double)this.lastEnd.Subtract(startPoint).Length > (double)renderInfo.GetSingleSpaceWidth() / 2.0)
+            //    this.AppendTextChunk(' ');
             this.AppendTextChunk(renderInfo.GetText());
             this.lastStart = startPoint;
             this.lastEnd = endPoint;
+        }
+
+        private RectangleF getRenderRectangleF(TextRenderInfo renderInfo)
+        {
+            var ascentLine = renderInfo.GetAscentLine();
+            var descentLine = renderInfo.GetDescentLine();
+            return new RectangleF(ascentLine.GetStartPoint()[0]
+                , ascentLine.GetStartPoint()[1]
+                , ascentLine.GetEndPoint()[0] - ascentLine.GetStartPoint()[0]
+                , descentLine.GetStartPoint()[1] - ascentLine.GetStartPoint()[1]);
         }
 
         protected void AppendTextChunk(string text)
